@@ -4,14 +4,14 @@
 
 ## Ziel
 
-Ein lauffähiges pnpm-Monorepo mit drei Workspace-Paketen (`core`, `plugin`, `cli`), TypeScript strict, Vitest, gemeinsame `tsconfig.base.json`, Build-Setup per `tsc`.
+Ein lauffähiges bun-Monorepo mit drei Workspace-Paketen (`core`, `plugin`, `cli`), TypeScript strict, Vitest, gemeinsame `tsconfig.base.json`, Build-Setup per `tsc`.
 
 ## Akzeptanzkriterien
 
-1. `pnpm install` läuft fehlerfrei.
-2. `pnpm -r build` baut alle drei Pakete nach `packages/*/dist/`.
-3. `pnpm -r test` läuft (auch wenn keine Tests existieren → exit 0).
-4. `pnpm -r typecheck` läuft fehlerfrei.
+1. `bun install` läuft fehlerfrei.
+2. `bun -r build` baut alle drei Pakete nach `packages/*/dist/`.
+3. `bun -r test` läuft (auch wenn keine Tests existieren → exit 0).
+4. `bun -r typecheck` läuft fehlerfrei.
 5. In jedem Paket existiert eine Dummy-Datei `src/index.ts` mit einem exportierten `VERSION = "0.0.0"`, damit Builds Output erzeugen.
 6. `core` hat **keine** runtime dependencies (nur devDeps).
 7. `plugin` hat `@opencode-overview/core` als workspace-dep (`"workspace:*"`).
@@ -22,11 +22,11 @@ Ein lauffähiges pnpm-Monorepo mit drei Workspace-Paketen (`core`, `plugin`, `cl
 
 ### `package.json` (root)
 - `"private": true`
-- Scripts: `build`, `test`, `typecheck`, `clean` — alle mit `pnpm -r`.
+- Scripts: `build`, `test`, `typecheck`, `clean` — alle mit `bun -r`.
 - devDependencies: `typescript@^5.4`, `vitest@^1`, `@types/node@^20`.
-- `"packageManager"`: aktuelle pnpm Version.
+- `"packageManager"`: aktuelle bun Version.
 
-### `pnpm-workspace.yaml`
+### `bun-workspace.yaml`
 - Enthält `packages/*`.
 
 ### `tsconfig.base.json`

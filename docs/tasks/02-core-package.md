@@ -69,4 +69,4 @@ Mindestens diese Fälle, alle mit `tmpdir`-basierter Isolation (setze `XDG_STATE
 
 ## Deliverable
 
-Commit `feat(core): session record store with atomic writes`. Alle Tests grün, `pnpm -r typecheck` sauber.
+Commit `feat(core): session record store with atomic writes`. Alle Tests grün, `bun -r typecheck` sauber.

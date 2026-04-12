@@ -67,7 +67,7 @@ Store-Layout:
 ## Konventionen
 
 - **Sprache**: TypeScript, strict mode. Ziel-Runtime: Node 20+ und Bun (OpenCode läuft auf Bun).
-- **Monorepo**: pnpm workspaces. Pakete: `core`, `plugin`, `cli`.
+- **Monorepo**: bun workspaces. Pakete: `core`, `plugin`, `cli`.
 - **Keine** schweren Dependencies. `core` hat **null** runtime deps. `plugin` nur OpenCode-SDK-Typen. `cli` darf `blessed` oder `ink` nutzen.
 - **Atomare File-Writes**: Immer `write tmp → rename`. Niemals direkt auf die Ziel-Datei schreiben (sonst sehen Reader halbe JSONs).
 - **Stale-Cleanup**: Records älter als 24h oder mit `pid` der nicht mehr existiert → beim nächsten Lesen rausfiltern.
@@ -91,7 +91,7 @@ Jeder Task ist so geschrieben, dass er **isoliert** von einem Agent umgesetzt we
 opencode-overview/
 ├── README.md
 ├── package.json          # root, workspaces
-├── pnpm-workspace.yaml
+├── bun-workspace.yaml
 ├── tsconfig.base.json
 ├── .gitignore
 └── packages/
