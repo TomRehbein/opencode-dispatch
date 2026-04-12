@@ -4,6 +4,9 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -12,5 +15,11 @@
   },
   "dependencies": {
     "@opencode-overview/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.0.224"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
   }
 }
