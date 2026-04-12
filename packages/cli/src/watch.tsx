@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Text, Box, useInput, useApp } from "ink";
 import * as fs from "fs";
 import { execFileSync } from "child_process";
@@ -7,6 +7,8 @@ import type { SessionRecord, SessionState } from "@opencode-overview/core";
 import { sortRecords, filterRecords } from "./sort.js";
 import type { FilterMode } from "./sort.js";
 import { renderTable } from "./table.js";
+
+const TERM_WIDTH_FALLBACK = 80;
 
 function buildCounts(records: SessionRecord[]): Record<SessionState, number> {
   const counts: Record<SessionState, number> = {
@@ -29,11 +31,15 @@ function cycleFilter(current: FilterMode): FilterMode {
   return "all";
 }
 
-export function WatchApp(): React.ReactElement {
+export interface WatchAppProps {
+  initialFilter?: FilterMode;
+}
+
+export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => {
   const { exit } = useApp();
   const [records, setRecords] = useState<SessionRecord[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<FilterMode>(initialFilter);
   const [statusMsg, setStatusMsg] = useState("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,8 +49,13 @@ export function WatchApp(): React.ReactElement {
     let watcher: fs.FSWatcher | null = null;
 
     async function reload() {
-      const all = await readAllRecords();
-      setRecords(sortRecords(all));
+      try {
+        const all = await readAllRecords();
+        setRecords(sortRecords(all));
+        setStatusMsg((prev) => (prev.startsWith("store error:") ? "" : prev));
+      } catch (err) {
+        setStatusMsg(`store error: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     reloadRef.current = () => { void reload(); };
@@ -57,7 +68,7 @@ export function WatchApp(): React.ReactElement {
     }
 
     try {
-      watcher = fs.watch(sessionsDir(), { persistent: false }, scheduleReload);
+      watcher = fs.watch(sessionsDir(), { persistent: true }, scheduleReload);
     } catch {
       // Directory may not exist yet; interval fallback covers it
     }
@@ -71,12 +82,32 @@ export function WatchApp(): React.ReactElement {
     };
   }, []);
 
-  const displayed = filterRecords(records, filterMode);
+  const displayed = useMemo(
+    () => filterRecords(records, filterMode),
+    [records, filterMode]
+  );
 
-  // Clamp selection when filter changes
+  // Map selectedId → current index, falling back to 0 when the id has vanished.
+  const selectedIndex = useMemo(() => {
+    if (displayed.length === 0) return -1;
+    if (selectedId == null) return 0;
+    const idx = displayed.findIndex((r) => r.sessionId === selectedId);
+    return idx >= 0 ? idx : 0;
+  }, [displayed, selectedId]);
+
+  // Initialize selection once records arrive.
   useEffect(() => {
-    setSelectedIndex((i) => Math.min(i, Math.max(0, displayed.length - 1)));
-  }, [displayed.length]);
+    if (selectedId == null && displayed.length > 0) {
+      setSelectedId(displayed[0].sessionId);
+    }
+  }, [displayed, selectedId]);
+
+  function moveSelection(delta: number) {
+    if (displayed.length === 0) return;
+    const next = Math.max(0, Math.min(displayed.length - 1, selectedIndex + delta));
+    setSelectedId(displayed[next].sessionId);
+    setStatusMsg("");
+  }
 
   useInput((input, key) => {
     if (input === "q" || (key.ctrl && input === "c")) {
@@ -84,13 +115,11 @@ export function WatchApp(): React.ReactElement {
       return;
     }
     if (key.upArrow || input === "k") {
-      setSelectedIndex((i) => Math.max(0, i - 1));
-      setStatusMsg("");
+      moveSelection(-1);
       return;
     }
     if (key.downArrow || input === "j") {
-      setSelectedIndex((i) => Math.min(displayed.length - 1, i + 1));
-      setStatusMsg("");
+      moveSelection(1);
       return;
     }
     if (key.return) {
@@ -119,8 +148,12 @@ export function WatchApp(): React.ReactElement {
     }
   });
 
-  const termWidth = process.stdout.columns ?? 120;
-  const tableStr = renderTable(displayed, { colors: true, termWidth });
+  const termWidth = process.stdout.columns ?? TERM_WIDTH_FALLBACK;
+  const tableStr = renderTable(displayed, {
+    colors: true,
+    termWidth,
+    selectedIndex: selectedIndex >= 0 ? selectedIndex : undefined,
+  });
   const counts = buildCounts(records);
   const footer = statusMsg
     ? statusMsg
@@ -132,4 +165,4 @@ export function WatchApp(): React.ReactElement {
       <Text dimColor>{footer}</Text>
     </Box>
   );
-}
+};

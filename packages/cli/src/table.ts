@@ -1,10 +1,15 @@
 import type { SessionRecord } from "@opencode-overview/core";
-import { colorState, formatDuration, truncate } from "./format.js";
+import { colorState, formatDuration, MAX_STATE_LABEL_WIDTH, truncate } from "./format.js";
 
 export interface RenderOpts {
   colors: boolean;
   termWidth: number;
+  /** Row index (into `records`) to highlight via ANSI inverse. Only applied when colors=true. */
+  selectedIndex?: number;
 }
+
+const ANSI_INVERSE = "\x1b[7m";
+const ANSI_RESET = "\x1b[0m";
 
 const COL_SEP = " | ";
 const SEP_LEN = COL_SEP.length; // 3
@@ -17,7 +22,7 @@ const HEADERS = {
   msg: "Letzte Nachricht",
 };
 
-const STATE_W = 18;  // longest state label: "waiting_permission" = 18
+const STATE_W = MAX_STATE_LABEL_WIDTH; // longest state label (derived)
 const SINCE_W = 11;  // "Wartet seit" = 11
 
 function displayState(state: string, colors: boolean, colWidth: number): string {
@@ -31,7 +36,7 @@ function pad(str: string, width: number): string {
 }
 
 export function renderTable(records: SessionRecord[], opts: RenderOpts): string {
-  const { colors, termWidth } = opts;
+  const { colors, termWidth, selectedIndex } = opts;
 
   const maxProjectLen = records.reduce(
     (m, r) => Math.max(m, r.projectName.length),
@@ -83,11 +88,18 @@ export function renderTable(records: SessionRecord[], opts: RenderOpts): string 
     "-".repeat(msgW),
   ].join(COL_SEP);
 
-  const rows = records.map((r) => {
+  const rows = records.map((r, i) => {
     const since = formatDuration(Date.now() - Date.parse(r.updatedAt));
     const msg = truncate(r.lastMessage, msgW).padEnd(msgW);
-    const stateCell = displayState(r.state, colors, stateW);
-    return buildRow(r.projectName, r.sessionTitle, stateCell, since, msg);
+    // When the row is selected, suppress per-state color so the inverse
+    // highlight spans the row cleanly.
+    const useColors = colors && i !== selectedIndex;
+    const stateCell = displayState(r.state, useColors, stateW);
+    const row = buildRow(r.projectName, r.sessionTitle, stateCell, since, msg);
+    if (colors && i === selectedIndex) {
+      return `${ANSI_INVERSE}${row}${ANSI_RESET}`;
+    }
+    return row;
   });
 
   return [header, separator, ...rows].join("\n");

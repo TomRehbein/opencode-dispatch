@@ -87,4 +87,24 @@ describe("renderTable", () => {
     const result = renderTable(SAMPLE, { colors: true, termWidth: 120 });
     expect(result).toContain("\x1b[");
   });
+
+  it("selectedIndex wraps the selected row in ANSI inverse when colors=true", () => {
+    const result = renderTable(SAMPLE, {
+      colors: true,
+      termWidth: 120,
+      selectedIndex: 1,
+    });
+    const lines = result.split("\n");
+    // header, separator, row0, row1 — row1 should contain inverse escape
+    expect(lines[3]).toContain("\x1b[7m");
+  });
+
+  it("selectedIndex is ignored when colors=false (no ANSI at all)", () => {
+    const result = renderTable(SAMPLE, {
+      colors: false,
+      termWidth: 120,
+      selectedIndex: 0,
+    });
+    expect(result).not.toContain("\x1b[");
+  });
 });

@@ -27,6 +27,13 @@ const STATE_COLORS: Record<SessionState, string> = {
   idle: "\x1b[90m",
 };
 
+/** Max width across all SessionState label strings. Derived so adding a new
+ *  state doesn't silently break column alignment. */
+export const MAX_STATE_LABEL_WIDTH = Object.keys(STATE_COLORS).reduce(
+  (m, s) => Math.max(m, s.length),
+  0
+);
+
 export function colorState(state: SessionState): string {
   const open = STATE_COLORS[state];
   return `${open}${state}\x1b[0m`;

@@ -50,10 +50,18 @@ function parseArgs(args: string[]): {
   return { watch, json, filter };
 }
 
+const TERM_WIDTH_FALLBACK = 80;
+
 async function main() {
   const { watch, json, filter } = parseArgs(process.argv.slice(2));
 
+  if (watch && json) {
+    process.stderr.write("opencode-overview: --watch and --json cannot be combined\n");
+    process.exit(2);
+  }
+
   if (json) {
+    // Spec: "raw records as JSON ... for Scripting" — no sort, no filter.
     try {
       const records = await readAllRecords();
       process.stdout.write(JSON.stringify(records, null, 2) + "\n");
@@ -66,9 +74,11 @@ async function main() {
 
   if (watch) {
     const { render } = await import("ink");
-    const { WatchApp } = await import("./watch.js");
+    const watchMod: typeof import("./watch.js") = await import("./watch.js");
     const React = await import("react");
-    const { waitUntilExit } = render(React.createElement(WatchApp));
+    const { waitUntilExit } = render(
+      React.createElement(watchMod.WatchApp, { initialFilter: filter })
+    );
     await waitUntilExit();
     process.exit(0);
   }
@@ -78,7 +88,7 @@ async function main() {
     const records = await readAllRecords();
     const filtered = filterRecords(sortRecords(records), filter);
     const colors = Boolean(process.stdout.isTTY);
-    const termWidth = process.stdout.columns ?? 80;
+    const termWidth = process.stdout.columns ?? TERM_WIDTH_FALLBACK;
     process.stdout.write(renderTable(filtered, { colors, termWidth }) + "\n");
     process.exit(0);
   } catch {
