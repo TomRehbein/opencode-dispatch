@@ -7,7 +7,7 @@ Siehe `docs/tasks/00-PROJECT.md` für vollständigen Projekt-Kontext.
 - Genau einen Task pro Session bearbeiten. Task-Datei wird explizit genannt.
 - Nicht auf spätere Tasks vorgreifen.
 - Akzeptanzkriterien und Nicht-Ziele aus der Task-Datei strikt einhalten.
-- Nach jedem Task: `bun -r typecheck && bun -r test && bun -r build` muss grün sein.
+- Nach jedem Task: `bun run typecheck && bun run test && bun run build` muss grün sein.
 - Commits in der vom Task vorgeschlagenen Form.
 
 ## Commit-Style

@@ -5,11 +5,11 @@ A tool that shows the state of multiple parallel OpenCode instances — which se
 ## Dev
 
 ```bash
-bun install       # install dependencies
-bun -r build      # build all packages → packages/*/dist/
-bun -r test       # run tests in all packages
-bun -r typecheck  # type-check all packages
-bun -r clean      # remove dist directories
+bun install            # install dependencies
+bun run build      # build all packages → packages/*/dist/
+bun run test       # run tests in all packages
+bun run typecheck  # type-check all packages
+bun run clean      # remove dist directories
 ```
 
 ## Packages
