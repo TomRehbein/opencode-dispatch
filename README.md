@@ -1,28 +1,21 @@
-# opencode-overview — Task-Pakete für Agents
+# opencode-overview
 
-Dieses Verzeichnis enthält alle Dateien, um das Projekt `opencode-overview` schrittweise von mehreren Coding-Agents umsetzen zu lassen.
+A tool that shows the state of multiple parallel OpenCode instances — which sessions are waiting for a permission, a question, or have finished. It runs across all your tmux sessions so you always know where action is needed.
 
-## Wie benutzen?
+## Dev
 
-Jedem Agent gibst du **immer**:
-1. `00-PROJECT.md` (Kontext, Architektur, Konventionen, Datenschema)
-2. Genau **eine** Task-Datei (`01-*.md` bis `06-*.md`)
+```bash
+bun install            # install dependencies
+bun run build      # build all packages → packages/*/dist/
+bun run test       # run tests in all packages
+bun run typecheck  # type-check all packages
+bun run clean      # remove dist directories
+```
 
-Der Agent soll nur seinen Task umsetzen, nicht auf andere vorgreifen. Jeder Task hat explizite Akzeptanzkriterien und Nicht-Ziele.
+## Packages
 
-## Reihenfolge
-
-| # | Datei | Abhängigkeiten | Optional? |
-|---|---|---|---|
-| 1 | `01-repo-setup.md` | — | nein |
-| 2 | `02-core-package.md` | 01 | nein |
-| 3 | `03-plugin.md` | 02 | nein |
-| 4 | `04-cli-viewer.md` | 02 | nein |
-| 5 | `05-tmux-integration.md` | 02, 04 | empfohlen |
-| 6 | `06-daemon-upgrade.md` | 02–05 im Alltagsbetrieb | ja, erst bei echten Schmerzen |
-
-Tasks 03 und 04 sind **parallelisierbar** (beide hängen nur an 02).
-
-## Tipp für den Prompt an den Agent
-
-> Lies `00-PROJECT.md` für den Gesamtkontext und `<task>.md` für deinen Scope. Halte dich strikt an Akzeptanzkriterien und Nicht-Ziele. Bei Unklarheiten frag nach, bevor du Annahmen triffst. Schreibe Tests wie im Task spezifiziert. Committe mit der vorgeschlagenen Commit-Message.
+| Package | Description |
+|---|---|
+| `@opencode-overview/core` | Shared types and file-based store (read/write session records) |
+| `@opencode-overview/plugin` | OpenCode plugin that hooks into events and writes session state |
+| `@opencode-overview/cli` | Terminal UI viewer with `--watch` mode and tmux jump support |
