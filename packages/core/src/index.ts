@@ -31,7 +31,7 @@ export interface Summary {
   counts: Record<SessionState, number>;
 }
 
-const ALL_STATES: SessionState[] = [
+export const ALL_STATES: SessionState[] = [
   "idle",
   "running",
   "waiting_permission",
