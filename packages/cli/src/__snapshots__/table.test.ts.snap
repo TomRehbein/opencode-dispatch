@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderTable > snapshot: renders table without colors 1`] = `
+"Project | Session   | State              | Wartet seit | Letzte Nachricht
+------- | --------- | ------------------ | ----------- | ---------------------------------------------------------------
+alpha   | Fix auth  | waiting_permission | 2m          | Need approval to proceed                                       
+beta    | Add tests | running            | 10m         | Generating test cases...                                       "
+`;
