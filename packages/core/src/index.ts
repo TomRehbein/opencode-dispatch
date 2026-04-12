@@ -75,7 +75,7 @@ export async function writeRecord(rec: SessionRecord): Promise<void> {
   };
 
   const dest = recordPath(record.instanceId, record.sessionId);
-  const tmp = dest + ".tmp";
+  const tmp = `${dest}.${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(record, null, 2), "utf8");
   await fs.rename(tmp, dest);
 
@@ -91,6 +91,7 @@ export async function deleteRecord(
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
+  await writeSummary(await readAllRecords());
 }
 
 export async function readAllRecords(): Promise<SessionRecord[]> {
