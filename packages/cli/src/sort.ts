@@ -2,13 +2,14 @@ import type { SessionRecord, SessionState } from "@opencode-overview/core";
 
 export type FilterMode = "all" | "waiting" | "errors";
 
+// Tier 0 = states requiring user action; Tier 1 = rest (spec: "dann Rest").
 const STATE_TIER: Record<SessionState, number> = {
   waiting_permission: 0,
   waiting_answer: 0,
   error: 0,
   running: 1,
   idle: 1,
-  done: 2,
+  done: 1,
 };
 
 export function sortRecords(records: SessionRecord[]): SessionRecord[] {

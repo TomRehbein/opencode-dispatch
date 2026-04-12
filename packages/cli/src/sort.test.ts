@@ -33,10 +33,23 @@ describe("sortRecords", () => {
     expect(result[0].state).toBe("error");
   });
 
-  it("done appears after idle", () => {
-    const result = sortRecords([rec("done"), rec("idle")]);
-    expect(result[0].state).toBe("idle");
-    expect(result[1].state).toBe("done");
+  it("idle and done are in the same tier (both 'Rest')", () => {
+    // Same tier → sorted alphabetically by projectName tiebreaker
+    const result = sortRecords([
+      rec("done", "a-proj"),
+      rec("idle", "b-proj"),
+    ]);
+    expect(result[0].projectName).toBe("a-proj");
+    expect(result[1].projectName).toBe("b-proj");
+  });
+
+  it("done appears before running is NOT required (both tier 'rest')", () => {
+    const result = sortRecords([
+      rec("running", "b"),
+      rec("done", "a"),
+    ]);
+    // Both tier 1, sorted by projectName
+    expect(result[0].projectName).toBe("a");
   });
 
   it("within same tier, sorted alphabetically by projectName", () => {
