@@ -10,6 +10,7 @@ import {
   readFileSync,
 } from "fs";
 import {
+  ALL_STATES,
   makeInstanceId,
   writeRecord,
   recordPath,
@@ -20,15 +21,6 @@ import {
   type SessionState,
   type Summary,
 } from "@opencode-overview/core";
-
-const ALL_STATES: SessionState[] = [
-  "idle",
-  "running",
-  "waiting_permission",
-  "waiting_answer",
-  "error",
-  "done",
-];
 
 // ── Pure functions (exported for testing) ─────────────────────────────────────
 
@@ -62,8 +54,9 @@ export function eventToState(
 
 /**
  * Returns the tmux session name by running `tmux display -p '#S'`.
- * The `executor` parameter can be replaced in tests.
- * Returns undefined when not in tmux or when the command fails.
+ * `tmuxEnv` is only used as a presence check for $TMUX; the actual session
+ * name comes from the executor. The `executor` parameter is injectable for
+ * tests. Returns undefined when not in tmux or when the command fails.
  */
 export function parseTmuxTarget(
   tmuxEnv: string | undefined,
@@ -79,56 +72,97 @@ export function parseTmuxTarget(
   }
 }
 
-// ── Module-level singletons (one set per OpenCode process) ────────────────────
+/**
+ * Extract a human-readable message from any SDK error shape.
+ * Tries, in order: err.data.message, err.message, String(err), JSON.stringify.
+ */
+export function extractErrorMessage(err: unknown): string {
+  if (err === null || err === undefined) return "";
+  if (typeof err === "string") return err;
+  if (typeof err !== "object") return String(err);
 
-const instanceId = makeInstanceId();
-const tmuxTarget = parseTmuxTarget(process.env.TMUX);
-const projectPath = process.cwd();
-const projectName = path.basename(projectPath);
-
-// In-memory record cache: sessionId → record
-const sessions = new Map<string, SessionRecord>();
-// IDs of subagent sessions (those with a parentID)
-const subagentIds = new Set<string>();
-// childId → parentId (for propagating subagent.idle to the parent record)
-const subagentParent = new Map<string, string>();
-// Pending 60-second idle timers
-const idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-// ── Timer helpers ─────────────────────────────────────────────────────────────
-
-function clearIdleTimer(sessionId: string): void {
-  const t = idleTimers.get(sessionId);
-  if (t !== undefined) {
-    clearTimeout(t);
-    idleTimers.delete(sessionId);
+  const obj = err as Record<string, unknown>;
+  const data = obj.data;
+  if (data && typeof data === "object") {
+    const msg = (data as Record<string, unknown>).message;
+    if (typeof msg === "string" && msg.length > 0) return msg;
+  }
+  if (typeof obj.message === "string" && obj.message.length > 0) {
+    return obj.message;
+  }
+  if (err instanceof Error) return err.toString();
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
   }
 }
 
-function scheduleIdleTimer(sessionId: string): void {
-  clearIdleTimer(sessionId);
+// ── Plugin state (created per plugin-factory call) ────────────────────────────
+
+interface PluginState {
+  instanceId: string;
+  tmuxTarget: string | undefined;
+  projectPath: string;
+  projectName: string;
+  sessions: Map<string, SessionRecord>;
+  subagentIds: Set<string>;
+  subagentParent: Map<string, string>;
+  idleTimers: Map<string, ReturnType<typeof setTimeout>>;
+}
+
+function createState(): PluginState {
+  const projectPath = process.cwd();
+  return {
+    instanceId: makeInstanceId(),
+    tmuxTarget: parseTmuxTarget(process.env.TMUX),
+    projectPath,
+    projectName: path.basename(projectPath),
+    sessions: new Map(),
+    subagentIds: new Set(),
+    subagentParent: new Map(),
+    idleTimers: new Map(),
+  };
+}
+
+// ── Timer helpers ─────────────────────────────────────────────────────────────
+
+function clearIdleTimer(state: PluginState, sessionId: string): void {
+  const t = state.idleTimers.get(sessionId);
+  if (t !== undefined) {
+    clearTimeout(t);
+    state.idleTimers.delete(sessionId);
+  }
+}
+
+function scheduleIdleTimer(state: PluginState, sessionId: string): void {
+  clearIdleTimer(state, sessionId);
   const t = setTimeout(() => {
-    idleTimers.delete(sessionId);
-    updateSession(sessionId, "idle.timer", null).catch(() => {});
+    state.idleTimers.delete(sessionId);
+    updateSession(state, sessionId, "idle.timer", null).catch(() => {});
   }, 60_000);
   t.unref();
-  idleTimers.set(sessionId, t);
+  state.idleTimers.set(sessionId, t);
 }
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 
 async function getOrCreateRecord(
+  state: PluginState,
   sessionId: string,
   sessionTitle: string
 ): Promise<SessionRecord> {
-  const cached = sessions.get(sessionId);
+  const cached = state.sessions.get(sessionId);
   if (cached) return cached;
 
   // Try reading a record already on disk from a previous event
   try {
-    const raw = await fs.readFile(recordPath(instanceId, sessionId), "utf8");
+    const raw = await fs.readFile(
+      recordPath(state.instanceId, sessionId),
+      "utf8"
+    );
     const rec = JSON.parse(raw) as SessionRecord;
-    sessions.set(sessionId, rec);
+    state.sessions.set(sessionId, rec);
     return rec;
   } catch {
     /* first event for this session */
@@ -136,47 +170,52 @@ async function getOrCreateRecord(
 
   const now = new Date().toISOString();
   const rec: SessionRecord = {
-    instanceId,
+    instanceId: state.instanceId,
     sessionId,
-    projectPath,
-    projectName,
+    projectPath: state.projectPath,
+    projectName: state.projectName,
     sessionTitle: sessionTitle || "(untitled)",
     state: "running",
     lastMessage: "",
-    tmuxTarget,
+    tmuxTarget: state.tmuxTarget,
     createdAt: now,
     updatedAt: now,
   };
-  sessions.set(sessionId, rec);
+  state.sessions.set(sessionId, rec);
   return rec;
 }
 
 /**
  * Apply a semantic event to the record for `sessionId` and persist it.
- *
- * @param sessionId   Target session
- * @param eventType   Semantic event key (see eventToState)
- * @param lastMsg     Replacement for lastMessage; null = keep existing
- * @param sessionTitle Override session title (used on first creation)
  */
 async function updateSession(
+  state: PluginState,
   sessionId: string,
   eventType: string,
   lastMsg: string | null,
   sessionTitle?: string
 ): Promise<void> {
-  const rec = await getOrCreateRecord(sessionId, sessionTitle ?? "(untitled)");
+  const rec = await getOrCreateRecord(
+    state,
+    sessionId,
+    sessionTitle ?? "(untitled)"
+  );
   const newState = eventToState(eventType, rec.state);
+
+  const nextTitle =
+    sessionTitle !== undefined && sessionTitle.length > 0
+      ? sessionTitle
+      : rec.sessionTitle;
 
   const updated: SessionRecord = {
     ...rec,
     state: newState ?? rec.state,
     lastMessage: lastMsg !== null ? lastMsg.slice(0, 200) : rec.lastMessage,
-    sessionTitle: sessionTitle ?? rec.sessionTitle,
+    sessionTitle: nextTitle,
     updatedAt: new Date().toISOString(),
   };
 
-  sessions.set(sessionId, updated);
+  state.sessions.set(sessionId, updated);
 
   try {
     await writeRecord(updated);
@@ -185,20 +224,49 @@ async function updateSession(
   }
 }
 
-// Extract a human-readable message from any SDK error shape
-function extractErrorMessage(err: unknown): string {
-  if (!err || typeof err !== "object") return "";
-  const data = (err as Record<string, unknown>).data;
-  if (data && typeof data === "object") {
-    const msg = (data as Record<string, unknown>).message;
-    if (typeof msg === "string") return msg;
+/**
+ * Like updateSession, but only acts when the record already exists (either
+ * in memory or on disk). Used for subagent.idle on the parent — we must not
+ * fabricate a "running" parent record if none has ever existed.
+ */
+async function updateExistingSession(
+  state: PluginState,
+  sessionId: string,
+  eventType: string,
+  lastMsg: string | null
+): Promise<void> {
+  let rec = state.sessions.get(sessionId);
+  if (!rec) {
+    try {
+      const raw = await fs.readFile(
+        recordPath(state.instanceId, sessionId),
+        "utf8"
+      );
+      rec = JSON.parse(raw) as SessionRecord;
+      state.sessions.set(sessionId, rec);
+    } catch {
+      return; // no existing record; nothing to update
+    }
   }
-  return "";
+
+  const newState = eventToState(eventType, rec.state);
+  const updated: SessionRecord = {
+    ...rec,
+    state: newState ?? rec.state,
+    lastMessage: lastMsg !== null ? lastMsg.slice(0, 200) : rec.lastMessage,
+    updatedAt: new Date().toISOString(),
+  };
+  state.sessions.set(sessionId, updated);
+
+  try {
+    await writeRecord(updated);
+  } catch (err) {
+    console.error("[opencode-overview/plugin] writeRecord failed:", err);
+  }
 }
 
 // ── Shutdown: mark all known sessions idle (synchronous) ─────────────────────
-// Must be synchronous: process.on("exit") cannot await promises, and
-// SIGINT/SIGTERM handlers call process.exit() immediately after.
+// Must be synchronous: process.on("exit") cannot await promises.
 
 function writeRecordSync(rec: SessionRecord): void {
   mkdirSync(sessionsDir(), { recursive: true });
@@ -208,10 +276,10 @@ function writeRecordSync(rec: SessionRecord): void {
   renameSync(tmp, dest);
 }
 
-// Synchronously rebuild summary.json from on-disk records. Used at shutdown
-// so the aggregate counts stay consistent with the per-session files we just
-// flipped to `idle`. Async core.writeSummary cannot run inside process "exit".
-function refreshSummarySync(): void {
+/**
+ * Rebuild summary.json from on-disk records synchronously. Exported for tests.
+ */
+export function refreshSummarySync(): void {
   const counts = Object.fromEntries(
     ALL_STATES.map((s) => [s, 0])
   ) as Record<SessionState, number>;
@@ -246,8 +314,12 @@ function refreshSummarySync(): void {
   renameSync(tmp, dest);
 }
 
-function shutdown(): void {
-  for (const [, rec] of sessions) {
+/**
+ * Flip every tracked session to `idle` synchronously and rebuild the summary.
+ * Exported for tests.
+ */
+export function shutdownState(state: PluginState): void {
+  for (const [, rec] of state.sessions) {
     const updated: SessionRecord = {
       ...rec,
       state: "idle",
@@ -266,19 +338,25 @@ function shutdown(): void {
   }
 }
 
-process.on("exit", shutdown);
-process.on("SIGINT", () => {
-  shutdown();
-  process.exit(0);
-});
-process.on("SIGTERM", () => {
-  shutdown();
-  process.exit(0);
-});
-
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
+/**
+ * Exported for tests.
+ */
+export function _createPluginState(): PluginState {
+  return createState();
+}
+
 const OverviewPlugin: Plugin = async () => {
+  const state = createState();
+
+  // Only `exit` — do NOT register SIGINT/SIGTERM here. Those signals are
+  // owned by the OpenCode host; hooking them and calling process.exit() would
+  // cut off the host's own cleanup (in-flight generations, temp files, etc.).
+  // A clean host shutdown fires `exit` for us; a hard kill we can't survive
+  // anyway.
+  process.on("exit", () => shutdownState(state));
+
   return {
     // ── Generic event handler ────────────────────────────────────────────────
     event: async ({ event }) => {
@@ -286,43 +364,72 @@ const OverviewPlugin: Plugin = async () => {
       if (event.type === "session.created") {
         const { id, title, parentID } = event.properties.info;
         if (parentID) {
-          subagentIds.add(id);
-          subagentParent.set(id, parentID);
+          state.subagentIds.add(id);
+          state.subagentParent.set(id, parentID);
         } else {
-          clearIdleTimer(id);
-          await updateSession(id, "session.status.busy", null, title).catch(
-            console.error
-          );
+          clearIdleTimer(state, id);
+          await updateSession(
+            state,
+            id,
+            "session.status.busy",
+            null,
+            title
+          ).catch(console.error);
         }
         return;
       }
 
       if (event.type === "session.updated") {
-        const { id, parentID } = event.properties.info;
+        const { id, title, parentID } = event.properties.info;
         if (parentID) {
-          subagentIds.add(id);
-          if (!subagentParent.has(id)) subagentParent.set(id, parentID);
+          state.subagentIds.add(id);
+          if (!state.subagentParent.has(id))
+            state.subagentParent.set(id, parentID);
+          return;
+        }
+        // Propagate title updates (OpenCode often backfills auto-generated
+        // titles after session.created). Only touch the record if we already
+        // track this session and the title actually changed — no state change.
+        const existing = state.sessions.get(id);
+        if (existing && title && existing.sessionTitle !== title) {
+          const updated: SessionRecord = {
+            ...existing,
+            sessionTitle: title,
+            updatedAt: new Date().toISOString(),
+          };
+          state.sessions.set(id, updated);
+          try {
+            await writeRecord(updated);
+          } catch (err) {
+            console.error(
+              "[opencode-overview/plugin] writeRecord failed:",
+              err
+            );
+          }
         }
         return;
       }
 
       if (event.type === "session.deleted") {
         const { id } = event.properties.info;
-        subagentIds.delete(id);
-        subagentParent.delete(id);
-        sessions.delete(id);
-        clearIdleTimer(id);
+        state.subagentIds.delete(id);
+        state.subagentParent.delete(id);
+        state.sessions.delete(id);
+        clearIdleTimer(state, id);
         return;
       }
 
       // session.status: busy → running -------------------------------------
       if (event.type === "session.status") {
         const { sessionID, status } = event.properties;
-        if (status.type === "busy" && !subagentIds.has(sessionID)) {
-          clearIdleTimer(sessionID);
-          await updateSession(sessionID, "session.status.busy", null).catch(
-            console.error
-          );
+        if (status.type === "busy" && !state.subagentIds.has(sessionID)) {
+          clearIdleTimer(state, sessionID);
+          await updateSession(
+            state,
+            sessionID,
+            "session.status.busy",
+            null
+          ).catch(console.error);
         }
         return;
       }
@@ -330,20 +437,23 @@ const OverviewPlugin: Plugin = async () => {
       // session.idle: → done (or propagate to parent if subagent) ---------
       if (event.type === "session.idle") {
         const { sessionID } = event.properties;
-        if (subagentIds.has(sessionID)) {
-          const parentId = subagentParent.get(sessionID);
+        if (state.subagentIds.has(sessionID)) {
+          const parentId = state.subagentParent.get(sessionID);
           if (parentId) {
-            await updateSession(
+            // Only update parent if it already exists — never fabricate
+            // a "running" parent for an orphan subagent.idle.
+            await updateExistingSession(
+              state,
               parentId,
               "subagent.idle",
               "subagent completed"
             ).catch(console.error);
           }
         } else {
-          await updateSession(sessionID, "session.idle", null).catch(
+          await updateSession(state, sessionID, "session.idle", null).catch(
             console.error
           );
-          scheduleIdleTimer(sessionID);
+          scheduleIdleTimer(state, sessionID);
         }
         return;
       }
@@ -351,9 +461,10 @@ const OverviewPlugin: Plugin = async () => {
       // session.error: → error ---------------------------------------------
       if (event.type === "session.error") {
         const { sessionID, error } = event.properties;
-        if (sessionID && !subagentIds.has(sessionID)) {
-          clearIdleTimer(sessionID);
+        if (sessionID && !state.subagentIds.has(sessionID)) {
+          clearIdleTimer(state, sessionID);
           await updateSession(
+            state,
             sessionID,
             "session.error",
             extractErrorMessage(error)
@@ -366,9 +477,9 @@ const OverviewPlugin: Plugin = async () => {
     // ── Permission asked: → waiting_permission ───────────────────────────────
     "permission.ask": async (input) => {
       const { sessionID } = input;
-      if (!subagentIds.has(sessionID)) {
-        clearIdleTimer(sessionID);
-        await updateSession(sessionID, "permission.asked", null).catch(
+      if (!state.subagentIds.has(sessionID)) {
+        clearIdleTimer(state, sessionID);
+        await updateSession(state, sessionID, "permission.asked", null).catch(
           console.error
         );
       }
@@ -376,9 +487,9 @@ const OverviewPlugin: Plugin = async () => {
 
     // ── Tool execute before: question tool → waiting_answer ──────────────────
     "tool.execute.before": async (input) => {
-      if (input.tool === "question" && !subagentIds.has(input.sessionID)) {
-        clearIdleTimer(input.sessionID);
-        await updateSession(input.sessionID, "tool.question", null).catch(
+      if (input.tool === "question" && !state.subagentIds.has(input.sessionID)) {
+        clearIdleTimer(state, input.sessionID);
+        await updateSession(state, input.sessionID, "tool.question", null).catch(
           console.error
         );
       }
