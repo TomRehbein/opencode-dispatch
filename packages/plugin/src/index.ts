@@ -3,12 +3,32 @@ import { execFileSync } from "child_process";
 import * as path from "path";
 import * as fs from "fs/promises";
 import {
+  mkdirSync,
+  writeFileSync,
+  renameSync,
+  readdirSync,
+  readFileSync,
+} from "fs";
+import {
   makeInstanceId,
   writeRecord,
   recordPath,
+  sessionsDir,
+  storeDir,
+  summaryPath,
   type SessionRecord,
   type SessionState,
+  type Summary,
 } from "@opencode-overview/core";
+
+const ALL_STATES: SessionState[] = [
+  "idle",
+  "running",
+  "waiting_permission",
+  "waiting_answer",
+  "error",
+  "done",
+];
 
 // ── Pure functions (exported for testing) ─────────────────────────────────────
 
@@ -91,6 +111,7 @@ function scheduleIdleTimer(sessionId: string): void {
     idleTimers.delete(sessionId);
     updateSession(sessionId, "idle.timer", null).catch(() => {});
   }, 60_000);
+  t.unref();
   idleTimers.set(sessionId, t);
 }
 
@@ -175,7 +196,55 @@ function extractErrorMessage(err: unknown): string {
   return "";
 }
 
-// ── Shutdown: mark all known sessions idle ────────────────────────────────────
+// ── Shutdown: mark all known sessions idle (synchronous) ─────────────────────
+// Must be synchronous: process.on("exit") cannot await promises, and
+// SIGINT/SIGTERM handlers call process.exit() immediately after.
+
+function writeRecordSync(rec: SessionRecord): void {
+  mkdirSync(sessionsDir(), { recursive: true });
+  const dest = recordPath(rec.instanceId, rec.sessionId);
+  const tmp = `${dest}.${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
+  writeFileSync(tmp, JSON.stringify(rec, null, 2), "utf8");
+  renameSync(tmp, dest);
+}
+
+// Synchronously rebuild summary.json from on-disk records. Used at shutdown
+// so the aggregate counts stay consistent with the per-session files we just
+// flipped to `idle`. Async core.writeSummary cannot run inside process "exit".
+function refreshSummarySync(): void {
+  const counts = Object.fromEntries(
+    ALL_STATES.map((s) => [s, 0])
+  ) as Record<SessionState, number>;
+
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(sessionsDir());
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") return;
+  }
+
+  for (const file of entries) {
+    if (!file.endsWith(".json")) continue;
+    try {
+      const raw = readFileSync(path.join(sessionsDir(), file), "utf8");
+      const rec = JSON.parse(raw) as SessionRecord;
+      counts[rec.state] = (counts[rec.state] ?? 0) + 1;
+    } catch {
+      // skip unreadable/corrupt files
+    }
+  }
+
+  const summary: Summary = {
+    updatedAt: new Date().toISOString(),
+    counts,
+  };
+
+  mkdirSync(storeDir(), { recursive: true });
+  const dest = summaryPath();
+  const tmp = `${dest}.${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
+  writeFileSync(tmp, JSON.stringify(summary, null, 2), "utf8");
+  renameSync(tmp, dest);
+}
 
 function shutdown(): void {
   for (const [, rec] of sessions) {
@@ -184,8 +253,16 @@ function shutdown(): void {
       state: "idle",
       updatedAt: new Date().toISOString(),
     };
-    // Fire-and-forget; errors are swallowed — we are shutting down
-    writeRecord(updated).catch(() => {});
+    try {
+      writeRecordSync(updated);
+    } catch {
+      // best-effort; we are shutting down
+    }
+  }
+  try {
+    refreshSummarySync();
+  } catch {
+    // best-effort; we are shutting down
   }
 }
 
