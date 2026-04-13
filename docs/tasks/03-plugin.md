@@ -4,7 +4,7 @@
 
 ## Ziel
 
-`@opencode-overview/plugin` ist ein OpenCode-Plugin, das bei jedem relevanten Event einen `SessionRecord` via `core.writeRecord` aktualisiert. Ein Plugin-Load pro OpenCode-Instanz, ein Record pro OpenCode-Session.
+`@opencode-dispatch/plugin` ist ein OpenCode-Plugin, das bei jedem relevanten Event einen `SessionRecord` via `core.writeRecord` aktualisiert. Ein Plugin-Load pro OpenCode-Instanz, ein Record pro OpenCode-Session.
 
 ## Referenz
 
@@ -12,11 +12,11 @@ Als Vorlage für Plugin-Struktur und Hook-Namen dient https://github.com/mohak34
 
 ## Public API
 
-`package.json` mit `"name": "@opencode-overview/plugin"`, publishConfig auf public. Entry-Point exportiert default eine Funktion nach OpenCode-Plugin-Spec.
+`package.json` mit `"name": "@opencode-dispatch/plugin"`, publishConfig auf public. Entry-Point exportiert default eine Funktion nach OpenCode-Plugin-Spec.
 
 User installiert via `opencode.json`:
 ```json
-{ "plugin": ["@opencode-overview/plugin@latest"] }
+{ "plugin": ["@opencode-dispatch/plugin@latest"] }
 ```
 
 ## State-Mapping

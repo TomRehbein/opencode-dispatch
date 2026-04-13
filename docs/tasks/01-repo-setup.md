@@ -14,8 +14,8 @@ Ein lauffähiges bun-Monorepo mit drei Workspace-Paketen (`core`, `plugin`, `cli
 4. `bun -r typecheck` läuft fehlerfrei.
 5. In jedem Paket existiert eine Dummy-Datei `src/index.ts` mit einem exportierten `VERSION = "0.0.0"`, damit Builds Output erzeugen.
 6. `core` hat **keine** runtime dependencies (nur devDeps).
-7. `plugin` hat `@opencode-overview/core` als workspace-dep (`"workspace:*"`).
-8. `cli` hat `@opencode-overview/core` als workspace-dep.
+7. `plugin` hat `@opencode-dispatch/core` als workspace-dep (`"workspace:*"`).
+8. `cli` hat `@opencode-dispatch/core` als workspace-dep.
 9. `.gitignore` ignoriert `node_modules`, `dist`, `*.log`, `.DS_Store`.
 
 ## Anforderungen an Dateien
@@ -33,7 +33,7 @@ Ein lauffähiges bun-Monorepo mit drei Workspace-Paketen (`core`, `plugin`, `cli
 - `strict: true`, `target: ES2022`, `module: NodeNext`, `moduleResolution: NodeNext`, `declaration: true`, `sourceMap: true`, `outDir` wird vom child gesetzt.
 
 ### Pro Paket (`packages/<name>/`)
-- `package.json` mit `"name": "@opencode-overview/<name>"`, `"version": "0.0.0"`, `"type": "module"`, `"main": "./dist/index.js"`, `"types": "./dist/index.d.ts"`, Scripts: `build: tsc -p tsconfig.json`, `typecheck: tsc --noEmit -p tsconfig.json`, `test: vitest run`.
+- `package.json` mit `"name": "@opencode-dispatch/<name>"`, `"version": "0.0.0"`, `"type": "module"`, `"main": "./dist/index.js"`, `"types": "./dist/index.d.ts"`, Scripts: `build: tsc -p tsconfig.json`, `typecheck: tsc --noEmit -p tsconfig.json`, `test: vitest run`.
 - `tsconfig.json` extended `../../tsconfig.base.json`, `compilerOptions.outDir: ./dist`, `include: ["src"]`.
 - `src/index.ts` mit `export const VERSION = "0.0.0";`.
 

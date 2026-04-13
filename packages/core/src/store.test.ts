@@ -11,23 +11,7 @@ import {
   recordPath,
   type SessionRecord,
 } from "./index.js";
-
-function makeRecord(
-  overrides: Partial<SessionRecord> = {}
-): SessionRecord {
-  return {
-    instanceId: "host-1234",
-    sessionId: "ses-abc",
-    projectPath: "/home/user/work/myproject",
-    projectName: "myproject",
-    sessionTitle: "Fix auth bug",
-    state: "running",
-    lastMessage: "Thinking...",
-    updatedAt: "",
-    createdAt: "",
-    ...overrides,
-  };
-}
+import { makeRecord } from "./test-fixtures.js";
 
 let tmpDir: string;
 

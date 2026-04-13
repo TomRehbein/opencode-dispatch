@@ -1,11 +1,11 @@
 {
-  "name": "@opencode-overview/cli",
+  "name": "@opencode-dispatch/cli",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "opencode-overview": "./dist/bin.js"
+    "opencode-dispatch": "./dist/bin.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@opencode-overview/core": "workspace:*",
+    "@opencode-dispatch/core": "workspace:*",
     "ink": "^5",
     "react": "^18"
   },

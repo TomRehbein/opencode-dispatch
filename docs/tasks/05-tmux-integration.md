@@ -29,10 +29,10 @@ set -g status-interval 2
 
 ## Deliverable 2: Jump-Keybinding
 
-Neue Datei `packages/cli/scripts/tmux-jump.sh`. Öffnet `opencode-overview --watch` in einem neuen tmux-Popup:
+Neue Datei `packages/cli/scripts/tmux-jump.sh`. Öffnet `opencode-dispatch --watch` in einem neuen tmux-Popup:
 
 ```sh
-tmux display-popup -E -w 90% -h 80% 'opencode-overview --watch'
+tmux display-popup -E -w 90% -h 80% 'opencode-dispatch --watch'
 ```
 
 User-Integration:
@@ -40,14 +40,14 @@ User-Integration:
 bind-key O run-shell '~/path/to/tmux-jump.sh'
 ```
 
-Script prüft, ob `opencode-overview` im PATH ist, sonst Fehlermeldung mit Install-Hinweis.
+Script prüft, ob `opencode-dispatch` im PATH ist, sonst Fehlermeldung mit Install-Hinweis.
 
 ## Deliverable 3: CLI-Flag `--print-status`
 
-Ergänze das CLI um `opencode-overview --print-status`, das **dasselbe** wie `tmux-status.sh` ausgibt — reines Node, für User ohne `jq`. Damit kann `tmux-status.sh` optional einfach `opencode-overview --print-status` aufrufen, wenn das CLI installiert ist:
+Ergänze das CLI um `opencode-dispatch --print-status`, das **dasselbe** wie `tmux-status.sh` ausgibt — reines Node, für User ohne `jq`. Damit kann `tmux-status.sh` optional einfach `opencode-dispatch --print-status` aufrufen, wenn das CLI installiert ist:
 
 ```sh
-set -g status-right '#(opencode-overview --print-status) | %H:%M'
+set -g status-right '#(opencode-dispatch --print-status) | %H:%M'
 ```
 
 Implementierung: liest `summary.json` via `readSummary()`, baut den Icon-String. Bei fehlender Summary → leerer String, exit 0.
