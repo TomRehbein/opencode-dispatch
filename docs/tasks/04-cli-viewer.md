@@ -4,20 +4,20 @@
 
 ## Ziel
 
-`@opencode-overview/cli` liefert das Binary `opencode-overview`. Zeigt eine Tabelle aller aktiven Sessions, optional live-aktualisiert per `--watch`.
+`@opencode-dispatch/cli` liefert das Binary `opencode-dispatch`. Zeigt eine Tabelle aller aktiven Sessions, optional live-aktualisiert per `--watch`.
 
 ## Bin-Setup
 
-`package.json` → `"bin": { "opencode-overview": "./dist/bin.js" }`. Shebang in `src/bin.ts`: `#!/usr/bin/env node`.
+`package.json` → `"bin": { "opencode-dispatch": "./dist/bin.js" }`. Shebang in `src/bin.ts`: `#!/usr/bin/env node`.
 
 ## Kommandos
 
 ```
-opencode-overview                  # one-shot Tabelle, dann exit
-opencode-overview --watch          # TUI, live-update via fs.watch
-opencode-overview --json           # raw records als JSON auf stdout, für Scripting
-opencode-overview --filter=waiting # nur states waiting_permission + waiting_answer
-opencode-overview --help
+opencode-dispatch                  # one-shot Tabelle, dann exit
+opencode-dispatch --watch          # TUI, live-update via fs.watch
+opencode-dispatch --json           # raw records als JSON auf stdout, für Scripting
+opencode-dispatch --filter=waiting # nur states waiting_permission + waiting_answer
+opencode-dispatch --help
 ```
 
 ## Tabellen-Format (nicht-watch)
@@ -74,4 +74,4 @@ Gibt `JSON.stringify(records, null, 2)` auf stdout und exitet 0. Keine Farben, k
 
 ## Deliverable
 
-Commit `feat(cli): opencode-overview binary with --watch tui`. README mit Screenshot oder ASCII-Beispiel.
+Commit `feat(cli): opencode-dispatch binary with --watch tui`. README mit Screenshot oder ASCII-Beispiel.

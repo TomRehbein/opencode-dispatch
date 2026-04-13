@@ -9,7 +9,7 @@ File-Store ist einfach, aber hat Nachteile:
 - Jeder Writer rebuildet `summary.json` → bei vielen parallelen Instanzen unnötige Writes.
 - Kein echtes Push — CLI muss pollen oder auf FS-Events warten.
 
-Lösung: Ein kleiner **User-Space-Daemon** `opencode-overview-daemon`, der State im Speicher hält und per Unix-Socket Push-Updates an subscribe-te Clients schickt. File-Store bleibt als **Snapshot-Persistenz** bestehen, damit nichts verloren geht und das alte Interface weiter funktioniert.
+Lösung: Ein kleiner **User-Space-Daemon** `opencode-dispatch-daemon`, der State im Speicher hält und per Unix-Socket Push-Updates an subscribe-te Clients schickt. File-Store bleibt als **Snapshot-Persistenz** bestehen, damit nichts verloren geht und das alte Interface weiter funktioniert.
 
 ## Architektur-Änderung
 
@@ -21,9 +21,9 @@ Plugin ──TCP/Unix-Socket──▶ Daemon ──in-memory state──▶ Clie
 
 Fallback: Wenn Daemon nicht erreichbar, schreibt Plugin direkt in File-Store wie bisher. CLI liest dann auch aus File-Store. **Zero config required.**
 
-## Neues Paket: `@opencode-overview/daemon`
+## Neues Paket: `@opencode-dispatch/daemon`
 
-Bin: `opencode-overview-daemon`. Lauscht auf `${XDG_RUNTIME_DIR:-/tmp}/opencode-overview.sock`.
+Bin: `opencode-dispatch-daemon`. Lauscht auf `${XDG_RUNTIME_DIR:-/tmp}/opencode-dispatch.sock`.
 
 ### Protokoll (JSON-Lines über Socket)
 

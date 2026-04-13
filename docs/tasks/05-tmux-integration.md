@@ -41,8 +41,8 @@ Unit-Tests in `packages/cli/src/panel.test.ts`.
 **`tmux-panel.sh`** — öffnet persistentes Side-Panel:
 ```sh
 #!/bin/sh
-# Validiert opencode-overview im PATH, sonst Fehlermeldung
-tmux split-window -h -l 45 "opencode-overview --watch"
+# Validiert opencode-dispatch im PATH, sonst Fehlermeldung
+tmux split-window -h -l 45 "opencode-dispatch --watch"
 ```
 
 User-Integration:
@@ -64,13 +64,13 @@ set -g status-interval 2
 
 ## Deliverable 4: CLI-Flag `--print-status`
 
-`opencode-overview --print-status` — dasselbe wie `tmux-status.sh`, reines Node:
-- Liest `readSummary()` aus `@opencode-overview/core`
+`opencode-dispatch --print-status` — dasselbe wie `tmux-status.sh`, reines Node:
+- Liest `readSummary()` aus `@opencode-dispatch/core`
 - Icon-String ausgeben; bei fehlender Summary → leerer String, exit 0
 - Alternative für User ohne `jq`
 
 ```sh
-set -g status-right '#(opencode-overview --print-status) | %H:%M'
+set -g status-right '#(opencode-dispatch --print-status) | %H:%M'
 ```
 
 ## Tests

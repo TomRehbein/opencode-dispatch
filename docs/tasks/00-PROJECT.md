@@ -1,4 +1,4 @@
-# Project: `opencode-overview`
+# Project: `opencode-dispatch`
 
 ## Was ist das?
 
@@ -13,8 +13,8 @@ Drei entkoppelte Komponenten, gemeinsames Daten-Schema:
 ```
 ┌──────────────────────┐        ┌───────────────────────┐        ┌──────────────────┐
 │ OpenCode Plugin      │ writes │ Store                 │ reads  │ CLI Viewer       │
-│ (in jeder Instanz)   │──────▶ │ ~/.local/state/       │◀────── │ opencode-overview│
-│ Hooks auf Events     │        │ opencode-overview/    │        │ TUI + tmux jump  │
+│ (in jeder Instanz)   │──────▶ │ ~/.local/state/       │◀────── │ opencode-dispatch│
+│ Hooks auf Events     │        │ opencode-dispatch/    │        │ TUI + tmux jump  │
 └──────────────────────┘        └───────────────────────┘        └──────────────────┘
 ```
 
@@ -25,7 +25,7 @@ Drei entkoppelte Komponenten, gemeinsames Daten-Schema:
 
 ## Daten-Schema (zentral!)
 
-Diese Typen werden von Plugin **und** CLI gemeinsam genutzt und liegen im Paket `@opencode-overview/core`.
+Diese Typen werden von Plugin **und** CLI gemeinsam genutzt und liegen im Paket `@opencode-dispatch/core`.
 
 ```typescript
 export type SessionState =
@@ -52,7 +52,7 @@ export interface SessionRecord {
 
 Store-Layout:
 ```
-~/.local/state/opencode-overview/
+~/.local/state/opencode-dispatch/
 ├── sessions/
 │   ├── <instanceId>--<sessionId>.json    # ein Record pro Datei
 │   └── ...
@@ -88,7 +88,7 @@ Jeder Task ist so geschrieben, dass er **isoliert** von einem Agent umgesetzt we
 ## Repo-Wurzel
 
 ```
-opencode-overview/
+opencode-dispatch/
 ├── README.md
 ├── package.json          # root, workspaces
 ├── bun-workspace.yaml

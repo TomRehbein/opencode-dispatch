@@ -1,6 +1,6 @@
-# @opencode-overview/plugin
+# @opencode-dispatch/plugin
 
-OpenCode plugin that tracks session states across multiple OpenCode instances and writes them to a shared file store for [`opencode-overview`](https://github.com/TomRehbein/opencode-dispatch).
+OpenCode plugin that tracks session states across multiple OpenCode instances and writes them to a shared file store for [`opencode-dispatch`](https://github.com/TomRehbein/opencode-dispatch).
 
 ## Installation
 
@@ -8,7 +8,7 @@ Add the plugin to your `opencode.json`:
 
 ```json
 {
-  "plugin": ["@opencode-overview/plugin@latest"]
+  "plugin": ["@opencode-dispatch/plugin@latest"]
 }
 ```
 
@@ -16,7 +16,7 @@ OpenCode will install it automatically on next start.
 
 ## What it does
 
-The plugin hooks into OpenCode events and maintains one JSON record per session under `~/.local/state/opencode-overview/sessions/`. Each record tracks:
+The plugin hooks into OpenCode events and maintains one JSON record per session under `~/.local/state/opencode-dispatch/sessions/`. Each record tracks:
 
 | State | Meaning |
 |---|---|
@@ -27,7 +27,7 @@ The plugin hooks into OpenCode events and maintains one JSON record per session 
 | `idle` | Session inactive for >60 s after finishing |
 | `error` | Last run failed |
 
-A summary of counts is kept in `~/.local/state/opencode-overview/summary.json` (useful for tmux status lines).
+A summary of counts is kept in `~/.local/state/opencode-dispatch/summary.json` (useful for tmux status lines).
 
 ## Notes
 

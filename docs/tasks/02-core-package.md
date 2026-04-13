@@ -4,7 +4,7 @@
 
 ## Ziel
 
-Paket `@opencode-overview/core` implementiert das Daten-Schema und den File-basierten Store. **Keine** OpenCode- oder CLI-Logik — nur reiner, unit-getesteter Kern.
+Paket `@opencode-dispatch/core` implementiert das Daten-Schema und den File-basierten Store. **Keine** OpenCode- oder CLI-Logik — nur reiner, unit-getesteter Kern.
 
 ## Exports (public API)
 
@@ -15,7 +15,7 @@ export type SessionState = ...;          // exakt wie in 00-PROJECT.md
 export interface SessionRecord { ... };  // exakt wie in 00-PROJECT.md
 export interface Summary { updatedAt: string; counts: Record<SessionState, number>; };
 
-export function storeDir(): string;       // default: ~/.local/state/opencode-overview (respektiert $XDG_STATE_HOME)
+export function storeDir(): string;       // default: ~/.local/state/opencode-dispatch (respektiert $XDG_STATE_HOME)
 export function sessionsDir(): string;    // storeDir() + "/sessions"
 export function summaryPath(): string;    // storeDir() + "/summary.json"
 export function recordPath(instanceId: string, sessionId: string): string;
@@ -49,7 +49,7 @@ export function makeInstanceId(): string; // `${os.hostname()}-${process.pid}`
 2. Atomar schreiben wie `writeRecord`.
 
 ### Pfade & XDG
-- `storeDir()` ist `process.env.XDG_STATE_HOME ?? path.join(os.homedir(), ".local/state")` gefolgt von `"opencode-overview"`.
+- `storeDir()` ist `process.env.XDG_STATE_HOME ?? path.join(os.homedir(), ".local/state")` gefolgt von `"opencode-dispatch"`.
 
 ## Tests (vitest)
 

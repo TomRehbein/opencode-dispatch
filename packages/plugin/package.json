@@ -1,5 +1,5 @@
 {
-  "name": "@opencode-overview/plugin",
+  "name": "@opencode-dispatch/plugin",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,7 +21,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@opencode-overview/core": "workspace:*"
+    "@opencode-dispatch/core": "workspace:*"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.0.224"

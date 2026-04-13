@@ -10,13 +10,13 @@
       },
     },
     "packages/cli": {
-      "name": "@opencode-overview/cli",
+      "name": "@opencode-dispatch/cli",
       "version": "0.0.0",
       "bin": {
-        "opencode-overview": "./dist/bin.js",
+        "opencode-dispatch": "./dist/bin.js",
       },
       "dependencies": {
-        "@opencode-overview/core": "workspace:*",
+        "@opencode-dispatch/core": "workspace:*",
         "ink": "^5",
         "react": "^18",
       },
@@ -25,14 +25,14 @@
       },
     },
     "packages/core": {
-      "name": "@opencode-overview/core",
+      "name": "@opencode-dispatch/core",
       "version": "0.0.0",
     },
     "packages/plugin": {
-      "name": "@opencode-overview/plugin",
+      "name": "@opencode-dispatch/plugin",
       "version": "0.0.0",
       "dependencies": {
-        "@opencode-overview/core": "workspace:*",
+        "@opencode-dispatch/core": "workspace:*",
       },
       "devDependencies": {
         "@opencode-ai/plugin": "^1.0.224",
@@ -99,11 +99,11 @@
 
     "@opencode-ai/sdk": ["@opencode-ai/sdk@1.4.3", "", { "dependencies": { "cross-spawn": "7.0.6" } }, "sha512-X0CAVbwoGAjTY2iecpWkx2B+GAa2jSaQKYpJ+xILopeF/OGKZUN15mjqci+L7cEuwLHV5wk3x2TStUOVCa5p0A=="],
 
-    "@opencode-overview/cli": ["@opencode-overview/cli@workspace:packages/cli"],
+    "@opencode-dispatch/cli": ["@opencode-dispatch/cli@workspace:packages/cli"],
 
-    "@opencode-overview/core": ["@opencode-overview/core@workspace:packages/core"],
+    "@opencode-dispatch/core": ["@opencode-dispatch/core@workspace:packages/core"],
 
-    "@opencode-overview/plugin": ["@opencode-overview/plugin@workspace:packages/plugin"],
+    "@opencode-dispatch/plugin": ["@opencode-dispatch/plugin@workspace:packages/plugin"],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.60.1", "", { "os": "android", "cpu": "arm" }, "sha512-d6FinEBLdIiK+1uACUttJKfgZREXrF0Qc2SmLII7W2AD8FfiZ9Wjd+rD/iRuf5s5dWrr1GgwXCvPqOuDquOowA=="],
 

@@ -1,4 +1,4 @@
-# opencode-overview
+# opencode-dispatch
 
 A tool that shows the state of multiple parallel OpenCode instances — which sessions are waiting for a permission, a question, or have finished. It runs across all your tmux sessions so you always know where action is needed.
 
@@ -16,22 +16,22 @@ bun run clean      # remove dist directories
 
 | Package | Description |
 |---|---|
-| `@opencode-overview/core` | Shared types and file-based store (read/write session records) |
-| `@opencode-overview/plugin` | OpenCode plugin that hooks into events and writes session state |
-| `@opencode-overview/cli` | Terminal UI viewer with `--watch` mode and tmux jump support |
+| `@opencode-dispatch/core` | Shared types and file-based store (read/write session records) |
+| `@opencode-dispatch/plugin` | OpenCode plugin that hooks into events and writes session state |
+| `@opencode-dispatch/cli` | Terminal UI viewer with `--watch` mode and tmux jump support |
 
 ## CLI Usage
 
 After `bun run build`, the binary is available at `packages/cli/dist/bin.js`
-(or via `bun link` as `opencode-overview`).
+(or via `bun link` as `opencode-dispatch`).
 
 ```
-opencode-overview                  # one-shot table, then exit
-opencode-overview --watch          # live TUI, updates via fs.watch
-opencode-overview --json           # raw records as JSON (for scripting)
-opencode-overview --filter=waiting # only waiting_permission + waiting_answer
-opencode-overview --filter=errors  # only error records
-opencode-overview --help
+opencode-dispatch                  # one-shot table, then exit
+opencode-dispatch --watch          # live TUI, updates via fs.watch
+opencode-dispatch --json           # raw records as JSON (for scripting)
+opencode-dispatch --filter=waiting # only waiting_permission + waiting_answer
+opencode-dispatch --filter=errors  # only error records
+opencode-dispatch --help
 ```
 
 `--filter` applies to the one-shot table and `--watch` mode. `--json` always
