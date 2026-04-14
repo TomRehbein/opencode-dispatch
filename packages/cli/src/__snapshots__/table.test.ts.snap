@@ -1,8 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`renderTable > snapshot: renders table without colors 1`] = `
-"Project | Session   | State              | Wartet seit | Letzte Nachricht
-------- | --------- | ------------------ | ----------- | ---------------------------------------------------------------
-alpha   | Fix auth  | waiting_permission | 2m          | Need approval to proceed                                       
-beta    | Add tests | running            | 10m         | Generating test cases...                                       "
+exports[`renderList > snapshot: renders list without colors 1`] = `
+"▪ alpha - Fix auth (2m)
+▶ beta - Add tests (10m)"
 `;

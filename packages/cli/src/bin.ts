@@ -2,15 +2,17 @@
 import { readAllRecords } from "@opencode-dispatch/core";
 import { filterRecords, sortRecords } from "./sort.js";
 import type { FilterMode } from "./sort.js";
-import { renderTable } from "./table.js";
+import { renderList } from "./table.js";
 
 const USAGE = `Usage: opencode-dispatch [options]
 
 Options:
-  --watch            Live TUI (press q to exit)
+  --watch            Live TUI (default when no other mode flag is given)
   --json             Output session records as JSON
   --filter=<mode>    Filter sessions: all | waiting | errors  (default: all)
   --help, -h         Show this help
+
+Watch mode keys: q:exit  ↑↓/jk:nav  Enter:jump  r:refresh  f:filter  h:hide footer
 
 Exit codes: 0=ok  1=store unreadable  2=invalid args
 `;
@@ -53,7 +55,10 @@ function parseArgs(args: string[]): {
 const TERM_WIDTH_FALLBACK = 80;
 
 async function main() {
-    const { watch, json, filter } = parseArgs(process.argv.slice(2));
+    const parsed = parseArgs(process.argv.slice(2));
+    // Default to watch mode when no explicit mode flag is given.
+    const watch = parsed.watch || (!parsed.json);
+    const { json, filter } = parsed;
 
     if (watch && json) {
         process.stderr.write("opencode-dispatch: --watch and --json cannot be combined\n");
@@ -75,6 +80,10 @@ async function main() {
     }
 
     if (watch) {
+        // Clear the terminal before rendering the TUI for a clean view.
+        if (process.stdout.isTTY) {
+            process.stdout.write("\x1b[2J\x1b[H");
+        }
         const { render } = await import("ink");
         const watchMod: typeof import("./watch.js") = await import("./watch.js");
         const React = await import("react");
@@ -91,7 +100,7 @@ async function main() {
         const filtered = filterRecords(sortRecords(records), filter);
         const colors = Boolean(process.stdout.isTTY);
         const termWidth = process.stdout.columns ?? TERM_WIDTH_FALLBACK;
-        process.stdout.write(renderTable(filtered, { colors, termWidth }) + "\n");
+        process.stdout.write(renderList(filtered, { colors, termWidth }) + "\n");
         process.exit(0);
     } catch (err) {
         process.stderr.write(

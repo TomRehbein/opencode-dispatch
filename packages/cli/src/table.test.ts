@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderTable } from "./table.js";
+import { renderList } from "./table.js";
 import type { SessionRecord } from "@opencode-dispatch/core";
 import { makeRecord } from "@opencode-dispatch/core/test-fixtures";
 
@@ -42,60 +42,65 @@ afterEach(() => {
     vi.useRealTimers();
 });
 
-describe("renderTable", () => {
-    it("snapshot: renders table without colors", () => {
-        const result = renderTable(SAMPLE, { colors: false, termWidth: 120 });
+describe("renderList", () => {
+    it("snapshot: renders list without colors", () => {
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
         expect(result).toMatchSnapshot();
     });
 
-    it("contains column headers", () => {
-        const result = renderTable(SAMPLE, { colors: false, termWidth: 120 });
-        expect(result).toContain("Project");
-        expect(result).toContain("Session");
-        expect(result).toContain("State");
-        expect(result).toContain("Wartet seit");
-        expect(result).toContain("Letzte Nachricht");
-    });
-
     it("contains project and session names", () => {
-        const result = renderTable(SAMPLE, { colors: false, termWidth: 120 });
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
         expect(result).toContain("alpha");
         expect(result).toContain("Fix auth");
         expect(result).toContain("beta");
         expect(result).toContain("Add tests");
     });
 
-    it("empty records renders header and separator only", () => {
-        const result = renderTable([], { colors: false, termWidth: 80 });
-        expect(result).toContain("Project");
-        // only 2 lines: header + separator
-        const lines = result.split("\n").filter((l) => l.trim().length > 0);
-        expect(lines).toHaveLength(2);
+    it("contains state symbols", () => {
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
+        expect(result).toContain("▪"); // waiting_permission
+        expect(result).toContain("▶"); // running
+    });
+
+    it("contains duration", () => {
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
+        expect(result).toContain("2m");
+        expect(result).toContain("10m");
+    });
+
+    it("uses format: <symbol> <project> - <session> (<since>)", () => {
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
+        expect(result).toContain("▪ alpha - Fix auth (2m)");
+        expect(result).toContain("▶ beta - Add tests (10m)");
+    });
+
+    it("empty records returns placeholder line", () => {
+        const result = renderList([], { colors: false, termWidth: 80 });
+        expect(result).toBe("(keine aktiven Sessions)");
     });
 
     it("no ANSI codes when colors=false", () => {
-        const result = renderTable(SAMPLE, { colors: false, termWidth: 120 });
+        const result = renderList(SAMPLE, { colors: false, termWidth: 120 });
         expect(result).not.toContain("\x1b[");
     });
 
     it("ANSI codes present when colors=true", () => {
-        const result = renderTable(SAMPLE, { colors: true, termWidth: 120 });
+        const result = renderList(SAMPLE, { colors: true, termWidth: 120 });
         expect(result).toContain("\x1b[");
     });
 
     it("selectedIndex wraps the selected row in ANSI inverse when colors=true", () => {
-        const result = renderTable(SAMPLE, {
+        const result = renderList(SAMPLE, {
             colors: true,
             termWidth: 120,
             selectedIndex: 1,
         });
         const lines = result.split("\n");
-        // header, separator, row0, row1 — row1 should contain inverse escape
-        expect(lines[3]).toContain("\x1b[7m");
+        expect(lines[1]).toContain("\x1b[7m");
     });
 
     it("selectedIndex is ignored when colors=false (no ANSI at all)", () => {
-        const result = renderTable(SAMPLE, {
+        const result = renderList(SAMPLE, {
             colors: false,
             termWidth: 120,
             selectedIndex: 0,

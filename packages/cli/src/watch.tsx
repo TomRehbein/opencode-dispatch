@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Text, Box, useInput, useApp } from "ink";
 import * as fs from "fs";
 import { execFileSync } from "child_process";
-import { sessionsDir, readAllRecords, computeCounts } from "@opencode-dispatch/core";
+import { sessionsDir, readAllRecords } from "@opencode-dispatch/core";
 import type { SessionRecord } from "@opencode-dispatch/core";
 import { sortRecords, filterRecords } from "./sort.js";
 import type { FilterMode } from "./sort.js";
-import { renderTable } from "./table.js";
+import { renderList } from "./table.js";
 
 const TERM_WIDTH_FALLBACK = 80;
 
@@ -26,6 +26,7 @@ export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => 
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filterMode, setFilterMode] = useState<FilterMode>(initialFilter);
     const [statusMsg, setStatusMsg] = useState("");
+    const [showFooter, setShowFooter] = useState(true);
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const reloadRef = useRef<() => void>(() => undefined);
@@ -131,23 +132,26 @@ export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => 
             setStatusMsg("");
             return;
         }
+        if (input === "h") {
+            setShowFooter((prev) => !prev);
+            return;
+        }
     });
 
     const termWidth = process.stdout.columns ?? TERM_WIDTH_FALLBACK;
-    const tableStr = renderTable(displayed, {
+    const tableStr = renderList(displayed, {
         colors: true,
         termWidth,
         selectedIndex: selectedIndex >= 0 ? selectedIndex : undefined,
     });
-    const counts = computeCounts(records);
-    const footer = statusMsg
+    const footerText = statusMsg
         ? statusMsg
-        : `⏸ ${counts.waiting_permission}  ❓ ${counts.waiting_answer}  ✗ ${counts.error}  ▶ ${counts.running}  | filter: ${filterMode}  | q:exit  ↑↓/jk:select  Enter:jump  r:refresh  f:filter`;
+        : `filter: ${filterMode}  | q:exit  ↑↓/jk:nav  Enter:jump  r:refresh  f:filter  h:hide`;
 
     return (
         <Box flexDirection="column">
             <Text>{tableStr}</Text>
-            <Text dimColor>{footer}</Text>
+            {showFooter && <Text dimColor>{footerText}</Text>}
         </Box>
     );
 };
