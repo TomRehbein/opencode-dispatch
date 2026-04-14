@@ -1,5 +1,21 @@
-import { describe, it, expect } from "vitest";
-import { formatDuration, colorState, truncate } from "./format.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { formatDuration, colorState, truncate, formatLine } from "./format.js";
+import type { SessionRecord } from "@opencode-dispatch/core";
+
+function makeRecord(overrides: Partial<SessionRecord> = {}): SessionRecord {
+    return {
+        instanceId: "inst-1",
+        sessionId: "sess-1",
+        projectPath: "/proj",
+        projectName: "myproject",
+        sessionTitle: "my-session",
+        state: "running",
+        lastMessage: "",
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        ...overrides,
+    };
+}
 
 describe("formatDuration", () => {
   it("0ms → '< 1m'", () => {
@@ -66,5 +82,52 @@ describe("truncate", () => {
     const result = truncate("hello world", 8);
     expect(result.length).toBe(8);
     expect(result.endsWith("…")).toBe(true);
+  });
+});
+
+describe("formatLine with maxWidth", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("no maxWidth: returns full line unchanged", () => {
+    const rec = makeRecord({ projectName: "proj", sessionTitle: "session" });
+    // mock Date.now so since = "< 1m"
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(rec.updatedAt));
+    const line = formatLine(rec, false);
+    expect(line).toBe("▶ proj - session (< 1m)");
+  });
+
+  it("line fits within maxWidth: not truncated", () => {
+    const rec = makeRecord({ projectName: "proj", sessionTitle: "sess" });
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(rec.updatedAt));
+    const line = formatLine(rec, false, 80);
+    // "▶ proj - sess (< 1m)" = 20 chars → fits
+    expect(line).toBe("▶ proj - sess (< 1m)");
+  });
+
+  it("sessionTitle is truncated when line exceeds maxWidth", () => {
+    const rec = makeRecord({ projectName: "proj", sessionTitle: "a-very-long-session-title" });
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(rec.updatedAt));
+    const line = formatLine(rec, false, 30);
+    // visible length should be ≤ 30
+    expect(line.length).toBeLessThanOrEqual(30);
+    expect(line).toContain("proj");
+    expect(line).toContain("…");
+  });
+
+  it("projectName is also truncated when skeleton alone exceeds maxWidth", () => {
+    const rec = makeRecord({
+        projectName: "a-very-long-project-name",
+        sessionTitle: "a-very-long-session-title",
+    });
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(rec.updatedAt));
+    const line = formatLine(rec, false, 25);
+    expect(line.length).toBeLessThanOrEqual(25);
+  });
+
+  it("returns something sensible for very small maxWidth", () => {
+    const rec = makeRecord({ projectName: "proj", sessionTitle: "sess" });
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(rec.updatedAt));
+    // Should not throw
+    expect(() => formatLine(rec, false, 5)).not.toThrow();
   });
 });
