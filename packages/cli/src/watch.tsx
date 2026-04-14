@@ -1,20 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Text, Box, useInput, useApp } from "ink";
+import { Text, Box, useInput, useApp, useStdout } from "ink";
 import * as fs from "fs";
 import { execFileSync } from "child_process";
-import { sessionsDir, readAllRecords } from "@opencode-dispatch/core";
+import { sessionsDir, readAllRecords, writeRecord } from "@opencode-dispatch/core";
 import type { SessionRecord } from "@opencode-dispatch/core";
-import { sortRecords, filterRecords } from "./sort.js";
+import { sortRecords, filterRecords, cycleFilter } from "./sort.js";
 import type { FilterMode } from "./sort.js";
 import { renderList } from "./table.js";
 
 const TERM_WIDTH_FALLBACK = 80;
-
-function cycleFilter(current: FilterMode): FilterMode {
-    if (current === "all") return "waiting";
-    if (current === "waiting") return "errors";
-    return "all";
-}
 
 export interface WatchAppProps {
     initialFilter?: FilterMode;
@@ -22,14 +16,26 @@ export interface WatchAppProps {
 
 export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => {
     const { exit } = useApp();
+    const { stdout } = useStdout();
     const [records, setRecords] = useState<SessionRecord[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filterMode, setFilterMode] = useState<FilterMode>(initialFilter);
     const [statusMsg, setStatusMsg] = useState("");
     const [showFooter, setShowFooter] = useState(true);
+    const [termWidth, setTermWidth] = useState<number>(
+        stdout?.columns ?? TERM_WIDTH_FALLBACK
+    );
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const reloadRef = useRef<() => void>(() => undefined);
+
+    // Keep termWidth in sync when the pane is resized (e.g. in tmux).
+    useEffect(() => {
+        if (!stdout) return;
+        const handler = () => setTermWidth(stdout.columns ?? TERM_WIDTH_FALLBACK);
+        stdout.on("resize", handler);
+        return () => { stdout.off("resize", handler); };
+    }, [stdout]);
 
     useEffect(() => {
         let watcher: fs.FSWatcher | null = null;
@@ -136,9 +142,19 @@ export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => 
             setShowFooter((prev) => !prev);
             return;
         }
+        if (input === "x") {
+            const rec = displayed[selectedIndex];
+            if (!rec) return;
+            void writeRecord({ ...rec, hidden: true }).then(() => {
+                reloadRef.current();
+                setStatusMsg('Session hidden  (f:filter → "hidden" to show)');
+            }).catch((err: unknown) => {
+                setStatusMsg(`hide error: ${String(err)}`);
+            });
+            return;
+        }
     });
 
-    const termWidth = process.stdout.columns ?? TERM_WIDTH_FALLBACK;
     const tableStr = renderList(displayed, {
         colors: true,
         termWidth,
@@ -146,7 +162,7 @@ export const WatchApp: React.FC<WatchAppProps> = ({ initialFilter = "all" }) => 
     });
     const footerText = statusMsg
         ? statusMsg
-        : `filter: ${filterMode}  | q:exit  ↑↓/jk:nav  Enter:jump  r:refresh  f:filter  h:hide`;
+        : `filter: ${filterMode}  | q:exit  ↑↓/jk:nav  Enter:jump  r:reload  f:filter  x:hide  h:help`;
 
     return (
         <Box flexDirection="column">

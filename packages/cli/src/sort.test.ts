@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { sortRecords, filterRecords } from "./sort.js";
+import { sortRecords, filterRecords, cycleFilter } from "./sort.js";
 import type { SessionRecord, SessionState } from "@opencode-dispatch/core";
 import { makeRecord } from "@opencode-dispatch/core/test-fixtures";
 
-function rec(state: SessionState, projectName = "proj", sessionTitle = "sess"): SessionRecord {
-    return makeRecord({ state, projectName, sessionTitle, sessionId: "s1" });
+function rec(state: SessionState, projectName = "proj", sessionTitle = "sess", hidden?: boolean): SessionRecord {
+    return makeRecord({ state, projectName, sessionTitle, sessionId: "s1", hidden });
 }
 
 describe("sortRecords", () => {
@@ -102,5 +102,56 @@ describe("filterRecords", () => {
         expect(filterRecords([], "waiting")).toHaveLength(0);
         expect(filterRecords([], "errors")).toHaveLength(0);
         expect(filterRecords([], "all")).toHaveLength(0);
+        expect(filterRecords([], "hidden")).toHaveLength(0);
+    });
+
+    it("mode=all excludes hidden sessions", () => {
+        const records = [
+            rec("running"),
+            rec("idle", "proj", "sess", true),
+        ];
+        const result = filterRecords(records, "all");
+        expect(result).toHaveLength(1);
+        expect(result[0].hidden).toBeFalsy();
+    });
+
+    it("mode=hidden returns only hidden sessions", () => {
+        const records = [
+            rec("running"),
+            rec("idle", "proj", "sess", true),
+            rec("done", "proj2", "sess2", true),
+        ];
+        const result = filterRecords(records, "hidden");
+        expect(result).toHaveLength(2);
+        expect(result.every((r) => r.hidden === true)).toBe(true);
+    });
+
+    it("mode=waiting excludes hidden sessions", () => {
+        const records = [
+            rec("waiting_permission"),
+            rec("waiting_answer", "proj", "sess", true),
+        ];
+        const result = filterRecords(records, "waiting");
+        expect(result).toHaveLength(1);
+        expect(result[0].hidden).toBeFalsy();
+    });
+
+    it("mode=errors excludes hidden sessions", () => {
+        const records = [
+            rec("error"),
+            rec("error", "proj", "sess", true),
+        ];
+        const result = filterRecords(records, "errors");
+        expect(result).toHaveLength(1);
+        expect(result[0].hidden).toBeFalsy();
+    });
+});
+
+describe("cycleFilter", () => {
+    it("all → waiting → errors → hidden → all", () => {
+        expect(cycleFilter("all")).toBe("waiting");
+        expect(cycleFilter("waiting")).toBe("errors");
+        expect(cycleFilter("errors")).toBe("hidden");
+        expect(cycleFilter("hidden")).toBe("all");
     });
 });

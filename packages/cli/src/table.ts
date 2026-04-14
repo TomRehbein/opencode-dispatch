@@ -21,7 +21,7 @@ const ANSI_RESET = "\x1b[0m";
  *  When `records` is empty, a single placeholder line is returned.
  *  The selected row (if any) is wrapped in ANSI inverse when colors=true. */
 export function renderList(records: SessionRecord[], opts: RenderOpts): string {
-    const { colors, selectedIndex } = opts;
+    const { colors, termWidth, selectedIndex } = opts;
 
     if (records.length === 0) {
         return "(keine aktiven Sessions)";
@@ -29,7 +29,7 @@ export function renderList(records: SessionRecord[], opts: RenderOpts): string {
 
     return records
         .map((r, i) => {
-            const line = formatLine(r, colors && i !== selectedIndex);
+            const line = formatLine(r, colors && i !== selectedIndex, termWidth);
             if (colors && i === selectedIndex) {
                 return `${ANSI_INVERSE}${line}${ANSI_RESET}`;
             }

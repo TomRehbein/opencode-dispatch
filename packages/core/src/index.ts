@@ -24,6 +24,10 @@ export interface SessionRecord {
     tmuxTarget?: string;
     updatedAt: string;
     createdAt: string;
+    /** When true the session is hidden from the default "all" view.
+     *  Hidden sessions remain on disk until the normal 24-hour stale purge
+     *  and can be revealed via the "hidden" filter mode. */
+    hidden?: boolean;
 }
 
 export interface Summary {

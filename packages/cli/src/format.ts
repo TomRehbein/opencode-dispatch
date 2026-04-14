@@ -55,14 +55,52 @@ export function colorState(state: SessionState): string {
 /** Formats a single session record as one line:
  *  `<symbol> <project> - <session> (<since>)`
  *
+ *  When `maxWidth` is provided the visible text is constrained to that many
+ *  columns. `sessionTitle` is shortened first; if the fixed skeleton alone
+ *  exceeds the budget, `projectName` is shortened as well.
+ *
  *  When `colors` is true the symbol is wrapped with the state's ANSI color. */
-export function formatLine(record: SessionRecord, colors: boolean): string {
+export function formatLine(record: SessionRecord, colors: boolean, maxWidth?: number): string {
     const symbol = STATE_SYMBOLS[record.state];
     const since = formatDuration(Date.now() - Date.parse(record.updatedAt));
-    const line = `${symbol} ${record.projectName} - ${record.sessionTitle} (${since})`;
+
+    let projectName = record.projectName;
+    let sessionTitle = record.sessionTitle;
+
+    if (maxWidth !== undefined && maxWidth > 0) {
+        // Fixed skeleton (excluding the two variable parts):
+        // "<symbol> " (2) + " - " (3) + " (" (2) + since + ")" (1)
+        const skeleton = 2 + 3 + 2 + since.length + 1; // symbol(1) + space(1) + " - " + " (" + since + ")"
+        const budget = maxWidth - skeleton;
+
+        if (budget <= 0) {
+            // Extreme narrow pane — show as little as possible
+            projectName = "";
+            sessionTitle = "";
+        } else {
+            // Total visible chars available for projectName + sessionTitle
+            const totalAvail = budget;
+            const naturalLen = projectName.length + sessionTitle.length;
+
+            if (naturalLen > totalAvail) {
+                // First shorten sessionTitle, keep at least 6 chars if possible
+                const minSession = Math.min(6, sessionTitle.length);
+                const sessionBudget = Math.max(minSession, totalAvail - projectName.length);
+                sessionTitle = truncate(sessionTitle, sessionBudget);
+
+                // If still over budget, shorten projectName too
+                const remaining = totalAvail - sessionTitle.length;
+                if (remaining < projectName.length) {
+                    projectName = truncate(projectName, Math.max(1, remaining));
+                }
+            }
+        }
+    }
+
+    const line = `${symbol} ${projectName} - ${sessionTitle} (${since})`;
     if (!colors) return line;
     const color = STATE_COLORS[record.state];
-    return `${color}${symbol}\x1b[0m ${record.projectName} - ${record.sessionTitle} (${since})`;
+    return `${color}${symbol}\x1b[0m ${projectName} - ${sessionTitle} (${since})`;
 }
 
 export function truncate(str: string, max: number): string {
