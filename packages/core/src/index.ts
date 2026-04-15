@@ -296,13 +296,23 @@ export async function readAllRecords(): Promise<SessionRecord[]> {
         })
     );
 
-    records.sort((a, b) => {
+    // Deduplicate: if multiple records share the same sessionId, keep only the newest
+    const sessionMap = new Map<string, SessionRecord>();
+    for (const rec of records) {
+        const existing = sessionMap.get(rec.sessionId);
+        if (!existing || Date.parse(rec.updatedAt) > Date.parse(existing.updatedAt)) {
+            sessionMap.set(rec.sessionId, rec);
+        }
+    }
+    const deduplicated = Array.from(sessionMap.values());
+
+    deduplicated.sort((a, b) => {
         const byProject = a.projectName.localeCompare(b.projectName);
         if (byProject !== 0) return byProject;
         return a.sessionTitle.localeCompare(b.sessionTitle);
     });
 
-    return records;
+    return deduplicated;
 }
 
 /**

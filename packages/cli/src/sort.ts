@@ -16,9 +16,8 @@ export function sortRecords(records: SessionRecord[]): SessionRecord[] {
     return [...records].sort((a, b) => {
         const tierDiff = STATE_TIER[a.state] - STATE_TIER[b.state];
         if (tierDiff !== 0) return tierDiff;
-        const byProject = a.projectName.localeCompare(b.projectName);
-        if (byProject !== 0) return byProject;
-        return a.sessionTitle.localeCompare(b.sessionTitle);
+        // Sort by time: newest first (descending)
+        return b.updatedAt.localeCompare(a.updatedAt);
     });
 }
 

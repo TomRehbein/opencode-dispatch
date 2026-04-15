@@ -169,7 +169,8 @@ function scheduleSummaryRebuild(state: PluginState): void {
 async function getOrCreateRecord(
     state: PluginState,
     sessionId: string,
-    sessionTitle: string
+    sessionTitle: string,
+    initialState?: SessionState
 ): Promise<SessionRecord> {
     const cached = state.sessions.get(sessionId);
     if (cached) return cached;
@@ -196,7 +197,7 @@ async function getOrCreateRecord(
         projectPath: state.projectPath,
         projectName: state.projectName,
         sessionTitle: sessionTitle || "(untitled)",
-        state: "running",
+        state: initialState ?? "running",
         lastMessage: "",
         tmuxTarget: state.tmuxTarget,
         createdAt: now,
@@ -217,10 +218,14 @@ async function updateSession(
     lastMsg: string | null,
     sessionTitle?: string
 ): Promise<void> {
+    // Determine initial state from event type if this is the first event for the session
+    const initialState = eventToState(eventType) ?? undefined;
+    
     const rec = await getOrCreateRecord(
         state,
         sessionId,
-        sessionTitle ?? "(untitled)"
+        sessionTitle ?? "(untitled)",
+        initialState
     );
     const newState = eventToState(eventType);
 

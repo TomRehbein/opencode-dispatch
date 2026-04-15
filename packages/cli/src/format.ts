@@ -71,7 +71,7 @@ export function formatLine(record: SessionRecord, colors: boolean, maxWidth?: nu
         // Fixed skeleton (excluding the two variable parts):
         // "<symbol> " (2) + " - " (3) + " (" (2) + since + ")" (1)
         const skeleton = 2 + 3 + 2 + since.length + 1; // symbol(1) + space(1) + " - " + " (" + since + ")"
-        const budget = maxWidth - skeleton;
+        const budget = maxWidth - skeleton - 1; // -1 for extra spacing to prevent line wrap
 
         if (budget <= 0) {
             // Extreme narrow pane — show as little as possible
